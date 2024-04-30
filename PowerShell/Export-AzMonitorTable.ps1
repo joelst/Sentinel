@@ -1,5 +1,7 @@
 #requires -version 7 -modules Az.OperationalInsights
 <#
+ THIS SCRIPT IS PROVIDED AS-IS. NO WARRANTY IS EXPRESSED OR IMPLIED. 
+ 
 .SYNOPSIS
     Export data from Azure Monitor (Log Analytics) to JSON files and upload to Azure Storage. There is a 100 second limit on returning data from Log Analytics using the
      Invoke-AzOperationalInsightsQuery cmdlet. This script will export data in 12 hour increments to avoid this limitation. This script provides methods for reducing the 
@@ -55,24 +57,24 @@ param (
     $WorkspaceId = "",
     # The name of the Azure Storage Account to upload the data to
     $AzureStorageAccountName = "",
-    # The name of the Azure Storage Container to upload the data to
-    $AzureStorageContainer = "",
     # The resource group for the Azure Storage Account
     $AzureStorageAccountResourceGroup = "",
+    # You can specify a specific storage path. If you do not specify one, the default path will be used.
+    [string]$AzureStoragePath,
     # Blob Storage tier to write the data
     [ValidateSet('Hot', 'Cool', 'Archive', 'Cold')]$StandardBlobTier = "Hot",
-    # The number of hours to get data for in each iteration. This should be evenly divisible by 24 to ensure you end on the specific day. This can also go as low as .25 hours.
-    $HourIncrements = 12,
+    # The number of hours to get data for in each iteration. This should be evenly divisible by 24. The default is 12 hours. It can be as low as 1/60 (one minute).
+    $HourIncrements = 24,
     # The path to write the log file. The default is the export path.
     $LogPath = $ExportPath,
     # Specify if you do not upload the data to Azure Storage
     [switch]$DoNotUpload,
     # Specify if you do not want to compress the JSON file.
     [switch]$DoNotCompress,
-    # You can specify a specific storage path. If you do not specify one, the default nested path will be used.
-    [string]$AzureStoragePath,
     # Sentinel workspace resource group.
-    [string]$SentinelResourceGroup
+    [string]$SentinelResourceGroup = "",
+    # Sentinel workspace name.
+    [string]$SentinelWorkspaceName = ""
 )
 
 function Write-Log {
@@ -151,34 +153,6 @@ function Read-ValidatedBlobTierHost {
 
 }
 
-function Read-ValidatedEventHost {
-    <#
-.SYNOPSIS
-    Gets validated user input. It will continue to prompt until valid text is provided.
-.PARAMETER Prompt
-    Text that will be displayed to user
-#>
-    [OutputType([string])]
-    [CmdletBinding()]
-    param (
-        [Parameter(Mandatory = $true, Position = 0)]
-        [string]
-        $Prompt
-    )
-    # Add a blank line before the prompt
-    Write-Host ""
-    $returnString = ""
-    do {
-        try {
-            [ValidateSet('Hot', 'Cool', 'Archive', 'Cold')]$returnString = Read-Host -Prompt $Prompt
-        } 
-        catch {}
-    } until ($?)
-        
-    return $returnString
-
-}
-
 # This was an attempt to set the maximum idle time for the service point to 10 minutes (600000 milliseconds) instead of the default 1000 milliseconds.
 [System.Net.ServicePointManager]::MaxServicePointIdleTime = 600000
 
@@ -205,14 +179,10 @@ if (-not $WorkspaceId) {
     $WorkspaceId = Read-Host "Enter the Log Analytics Workspace ID:"
 }
 
-# If the DoNotUpload switch is present, the AzureStorageAccountName, AzureStorageContainer, and AzureStorageAccountResourceGroup parameters are not required.
+# If the DoNotUpload parameter is specified, the AzureStorageAccountName, StandardBlobTier and AzureStorageAccountResourceGroup parameters are not required.
 if ($false -eq $DoNotUpload.IsPresent) {
-
     if (-not $AzureStorageAccountName) {
         $AzureStorageAccountName = Read-Host "Enter the Azure Storage Account name:"
-    }
-    if (-not $AzureStorageContainer) {
-        $AzureStorageContainer = Read-Host "Enter the Azure Storage Container name:"
     }
     if (-not $AzureStorageAccountResourceGroup) {
         $AzureStorageAccountResourceGroup = Read-Host "Enter the Azure Storage Account resource group:"
@@ -252,6 +222,15 @@ $hours = ($EndDate - $StartDate).TotalHours
 
 # Loop through all tables specified
 foreach ($table in $TableName) {
+    if ($AzureStoragePath) {
+
+        $azureStorageContainer = $AzureStoragePath.Split("/")[0]
+    }
+    else {
+        $azureStorageContainer = "am-$($table.ToLower())"
+    }
+    # Try to create the storage container, trying to create it again won't do anything.
+    $null = New-AzStorageContainer -Name $azureStorageContainer -Context $context -ErrorAction SilentlyContinue | Out-Null
 
     # Set the log file path for the current table.
     $Script:LogFilePath = Join-Path $LogPath "$table-$(Get-Date -f yy.MM).log"
@@ -260,8 +239,17 @@ foreach ($table in $TableName) {
     for ($i = 0; $i -lt $hours; $i = $i + $HourIncrements) {
 
         # Calculate the current date based on the start date and the loop index
-        $currentDate = $StartDate.AddHours($i)
+        if (-not $currentDate) {
+            $currentDate = $StartDate.AddHours($i)
+        }
+        
         $nextDate = $currentDate.AddHours($HourIncrements)
+
+        # If there is a fraction that doesn't result in exact minute increments, round up to a whole minute.
+        if ($nextDate.Second -ne 0) {
+            $nextDate = $nextDate.AddSeconds(-$nextDate.Second)
+            $nextDate = $nextDate.AddMinutes(1)
+        }
         
         # If the hour increments were not even, the nextDate might be past the EndDate. If that happens just use the EndDate
         if ($nextDate -gt $EndDate) {
@@ -272,21 +260,20 @@ foreach ($table in $TableName) {
         $jsonFileName = "$table-$($currentDate.ToString('yyyy-MM-dd-HHmm'))-$($nextDate.ToString('yyyy-MM-dd-HHmm')).json"
         $outputJsonFile = Join-Path $ExportPath $jsonFileName
         # Added to support previous longer file name
-        $outputOldJsonFileName = Join-Path $ExportPath "$table-$($currentDate.ToString('yyyy-MM-dd-mmHHss'))-$($nextDate.ToString('yyyy-MM-dd-mmHHss')).json"
+        $outputOldJsonFileName = Join-Path $ExportPath "$table-$($currentDate.ToString('yyyy-MM-dd-HHmm'))-$($nextDate.ToString('yyyy-MM-dd-HHmm')).json"
 
         $zipFileName = "$table-$($currentDate.ToString('yyyy-MM-dd-HHmm'))-$($nextDate.ToString('yyyy-MM-dd-HHmm')).json.zip"
         $outputZipFile = Join-Path $ExportPath $zipFileName
-        
         # Added to support previous longer file names
-        $outputOldZipFileName = Join-Path $ExportPath "$table-$($currentDate.ToString('yyyy-MM-dd-mmHHss'))-$($nextDate.ToString('yyyy-MM-dd-mmHHss')).json.zip"
+        $outputOldZipFileName = Join-Path $ExportPath "$table-$($currentDate.ToString('yyyy-MM-dd-HHmm'))-$($nextDate.ToString('yyyy-MM-dd-HHmm')).json.zip"
         
         # if the file already exists, skip querying the data
         if ((Test-Path $outputZipFile) -or (Test-Path $outputOldZipFileName)) {
-            Write-Log " $outputZipFile exists, will not query" -Severity Information
+            Write-Log "$outputZipFile exists. Skipping." -Severity Information
             continue
         }
         elseif ((Test-Path $outputJsonFile) -or (Test-Path $outputOldJsonFileName)) {
-            Write-Log " $outputJsonFile exists, will not query." -Severity Information
+            Write-Log "$outputJsonFile exists. Skipping." -Severity Information
             continue
         }
         else {
@@ -308,54 +295,47 @@ foreach ($table in $TableName) {
             if (($currentTableResult | Measure-Object).Count -ge 1) {
                 # output Json file with query response.
                 $currentTableResult | ConvertTo-json -Depth 100 -Compress | Out-File $outputJsonFile -Force
-            
+        
                 if ((Test-Path $outputJsonFile) -and ($DoNotCompress.IsPresent -eq $false)) {
                     $outputJsonFile | Compress-Archive -DestinationPath $outputZipFile -Force
                 }
                 else {
                     $outputZipFile = $outputJsonFile 
                 }
-            
+        
                 if (Test-Path $outputZipFile) {    
-                    if ($DoNotCompress.IsPresent -eq $false){
-                    # Remove the JSON file if the zip file was created.  
-                    $null = Remove-Item $outputJsonFile -Force  
-                    
+
+                    if ($DoNotCompress.IsPresent -eq $false) {
+                        # Remove the JSON file if the zip file was created.  
+                        $null = Remove-Item $outputJsonFile -Force  
                     }   
 
                     # upload the zip file to Azure Storage
                     if ($false -eq $DoNotUpload.IsPresent) {
 
+                        # If an AzureStoragePath was defined then use that instead of the default.
                         if ($AzureStoragePath) {
                             if ($DoNotCompress.IsPresent) {
-                                $blobpath = "$($AzureStoragePath)/$($outputJsonFile)"
+                                $blobPath = "$($AzureStoragePath)/$($outputJsonFile)"
                             }
                             else {
-                                $blobpath = "$($AzureStoragePath)/$($outputZipFile)"
+                                $blobPath = "$($AzureStoragePath)/$($outputZipFile)"
                             }
                         }
                         else {
-
-                            if ($HourIncrements -ge 1) {
-                                if ($DoNotCompress.IsPresent) {
-                                    $blobpath = "am-$($table.ToLower())/WorkspaceResourceId=/subscriptions/$SubscriptionId/resourcegroups/$($SentinelResourceGroup.ToLower())/providers/microsoft.operational.insights/workspaces/$($SentinelWorkspaceName.ToLower())/y=$($currentDate.ToString("yyyy"))/m=$($currentDate.ToString("MM"))/d=$($currentDate.ToString("dd"))/h=$($currentDate.ToString("HH"))/m=$($currentDate.ToString("mm"))/PT$($HourIncrements)H.json"                                
-                                }
-                                else {
-                                    $blobpath = "am-$($table.ToLower())/WorkspaceResourceId=/subscriptions/$SubscriptionId/resourcegroups/$($SentinelResourceGroup.ToLower())/providers/microsoft.operational.insights/workspaces/$($SentinelWorkspaceName.ToLower())/y=$($currentDate.ToString("yyyy"))/m=$($currentDate.ToString("MM"))/d=$($currentDate.ToString("dd"))/h=$($currentDate.ToString("HH"))/m=$($currentDate.ToString("mm"))/PT$($HourIncrements)H.json.zip"
-                                }
-                            }
+                            if ($DoNotCompress.IsPresent) {
+                                $timeSpanFileName = "$([System.Xml.XmlConvert]::ToString($currentTimeSpan)).json"
+                            } 
                             else {
-                                if ($DoNotCompress.IsPresent) {
-                                    $blobpath = "am-$($table.ToLower())/WorkspaceResourceId=/subscriptions/$SubscriptionId/resourcegroups/$($SentinelResourceGroup.ToLower())/providers/microsoft.operational.insights/workspaces/$($SentinelWorkspaceName.ToLower())/y=$($currentDate.ToString("yyyy"))/m=$($currentDate.ToString("MM"))/d=$($currentDate.ToString("dd"))/h=$($currentDate.ToString("HH"))/m=$($currentDate.ToString("mm"))/PT$($HourIncrements*60)M.json"
-                                }
-                                else {
-                                    $blobpath = "am-$($table.ToLower())/WorkspaceResourceId=/subscriptions/$SubscriptionId/resourcegroups/$($SentinelResourceGroup.ToLower())/providers/microsoft.operational.insights/workspaces/$($SentinelWorkspaceName.ToLower())/y=$($currentDate.ToString("yyyy"))/m=$($currentDate.ToString("MM"))/d=$($currentDate.ToString("dd"))/h=$($currentDate.ToString("HH"))/m=$($currentDate.ToString("mm"))/PT$($HourIncrements*60)M.json.zip"
-                                }
+                                $timeSpanFileName = "$([System.Xml.XmlConvert]::ToString($currentTimeSpan)).json.zip"
                             }
-                        }
-                        Write-Log "BlobPath: $blobpath" -Severity Debug
 
-                        $result = Set-AzStorageBlobContent -Context $context -Container $AzureStorageContainer -File $outputZipFile -Blob $blobpath -Force -ErrorAction Continue
+                            $blobPath = "WorkspaceResourceId=/subscriptions/$SubscriptionId/resourcegroups/$($SentinelResourceGroup.ToLower())/providers/microsoft.operational.insights/workspaces/$($SentinelWorkspaceName.ToLower())/y=$($currentDate.ToString("yyyy"))/m=$($currentDate.ToString("MM"))/d=$($currentDate.ToString("dd"))/h=$($currentDate.ToString("HH"))/m=$($currentDate.ToString("mm"))/$($timeSpanFileName)"                                
+
+                        }
+                        Write-Log "BlobPath: $blobPath" -Severity Debug
+
+                        $result = Set-AzStorageBlobContent -Context $context -Container $azureStorageContainer -File $outputZipFile -Blob $blobPath -Force -ErrorAction Continue
                         if ($result) {
                             Write-Log " File $outputZipFile uploaded to Azure Storage" -Severity Debug
                         }
@@ -372,5 +352,7 @@ foreach ($table in $TableName) {
                 Write-Log -Message "    No data returned for $table from $currentDate to $nextDate" -Severity Information
             }
         }
+        # To make sure we start where we left off and don't miss any data, we will set this loops end time to the next loops start time.
+        $currentDate = $nextDate
     }
 }
