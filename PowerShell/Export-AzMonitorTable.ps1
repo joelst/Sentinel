@@ -19,62 +19,54 @@
 .PARAMETER EndDate
     The end date to export data to. Should be in the format MM/dd/yyyy.
 .PARAMETER TenantId
-    The Azure Tenant ID for the Azure Subscription.
+    The Azure Tenant ID (GUID) for the Azure Subscription.
 .PARAMETER SubscriptionId
-    The Azure Subscription ID for the Azure Monitor (Sentinel) workspace and the Azure Storage Account.
+    The Azure Subscription ID (GUID) for the Azure Monitor (Sentinel) workspace and the Azure Storage Account.
 .PARAMETER WorkspaceId
-    The Log Analytics Workspace ID.
+    The Log Analytics Workspace ID (GUID).
+.PARAMETER WorkspaceResourceGroup
+    The resource group where the Log Analytics Workspace is located.
+.PARAMETER WorkspaceName
+    The Log Analytics Workspace name.
 .PARAMETER AzureStorageAccountName
     The name of the Azure Storage Account to upload the data to.
-.PARAMETER AzureStorageContainer
-    The name of the Azure Storage Container to upload the data to.
 .PARAMETER AzureStorageAccountResourceGroup
     The resource group for the Azure Storage Account.
+.PARAMETER AzureStoragePath
+    Specify a path starting with the storage container name for where to store the exported data to override the default path. Example: storage-container-name/sentinelExport/2024/
+.PARAMETER StandardBlobTier
+    Specify the storage tier to store the uploaded file content. Can be Hot, Cool, Archive, or Cold. 
 .PARAMETER HourIncrements
-    The number of hours to get data for in each iteration. This must be evenly divisible by 24. The default is 12 hours.
-.PARAMETER DoNotUpload
-    Set to $true to not upload the data to Azure Storage.
+    The number of hours to get data for in each iteration. This should be evenly divisible by 24. The default is 12 hours. To specify increments in minutes, use fractions of an hour [1/60, 2/60, 3/60...]. You cannot specify a time less than one minute.
 .PARAMETER LogPath
     The path to write the log file. The default is the export path.
+.PARAMETER DoNotUpload
+    Specify this switch to disable upload the data to Azure Storage.
+.PARAMETER DoNotCompress
+    Specify this switch to disable compressing the JSON file using Zip compression.
 .EXAMPLE
-    .\Export-AzMonitorTable.ps1 -TableName "DeviceInfo" -ExportPath "C:\ExportTables" -StartDate "1/1/2023" -EndDate "1/11/2023" -TenantId "00000000-0000-0000-0000-000000000000" -SubscriptionId "00000000-0000-0000-0000-000000000000" -WorkspaceId "00000000-0000-0000-0000-000000000000" -AzureStorageAccountName "storageaccountname" -AzureStorageContainer "containername" -AzureStorageAccountResourceGroup "resourcegroupname" -HourIncrements 12 -LogPath "C:\SentinelTables"
-    #>
+    .\Export-AzMonitorTable.ps1 -TableName "DeviceInfo" -ExportPath "C:\ExportTables" -StartDate "1/1/2023" -EndDate "1/11/2023" -TenantId "00000000-0000-0000-0000-000000000000" -SubscriptionId "00000000-0000-0000-0000-000000000000" -WorkspaceId "00000000-0000-0000-0000-000000000000" -AzureStorageAccountName "storageaccountname" -AzureStorageAccountResourceGroup "resourcegroupname" -HourIncrements 12 -LogPath "C:\SentinelTables"
+    
+#>
 [CmdletBinding()]
 param (
-    # The table name(s) to export data. This can be a single table or an array of tables.
     [array]$TableName = "DeviceInfo",
-    # The local path to export data files to.
     $ExportPath = (Join-Path "C:/" "ExportedTables"),
-    # The start date to export data from, should be in the format MM/dd/yyyy
     [datetime]$StartDate = "4/1/2024",
-    # The end date to export data to, should be in the format MM/dd/yyyy
     [datetime]$EndDate = "4/11/2024",
-    $TenantId = "",
-    # The Azure Subscription ID for Sentinel and the Azure Storage Account
-    $SubscriptionId = "",
-    # The Log Analytics Workspace ID for Sentinel
-    $WorkspaceId = "",
-    # The name of the Azure Storage Account to upload the data to
-    $AzureStorageAccountName = "",
-    # The resource group for the Azure Storage Account
-    $AzureStorageAccountResourceGroup = "",
-    # You can specify a specific storage path. If you do not specify one, the default path will be used.
+    [guid]$TenantId,
+    [guid]$SubscriptionId,
+    [guid]$WorkspaceId,
+    [string]$WorkspaceResourceGroup = "",
+    [string]$WorkspaceName = "",
+    [string]$AzureStorageAccountName = "",
+    [string]$AzureStorageAccountResourceGroup = "",
     [string]$AzureStoragePath,
-    # Blob Storage tier to write the data
-    [ValidateSet('Hot', 'Cool', 'Archive', 'Cold')]$StandardBlobTier = "Hot",
-    # The number of hours to get data for in each iteration. This should be evenly divisible by 24. The default is 12 hours. It can be as low as 1/60 (one minute).
-    $HourIncrements = 24,
-    # The path to write the log file. The default is the export path.
-    $LogPath = $ExportPath,
-    # Specify if you do not upload the data to Azure Storage
+    [string][ValidateSet('Hot', 'Cool', 'Archive', 'Cold')]$StandardBlobTier = "Hot",
+    [decimal]$HourIncrements = 24,
+    [string]$LogPath = $ExportPath,
     [switch]$DoNotUpload,
-    # Specify if you do not want to compress the JSON file.
-    [switch]$DoNotCompress,
-    # Sentinel workspace resource group.
-    [string]$SentinelResourceGroup = "",
-    # Sentinel workspace name.
-    [string]$SentinelWorkspaceName = ""
-
+    [switch]$DoNotCompress
 )
 
 function Write-Log {
@@ -155,53 +147,157 @@ function Read-ValidatedBlobTierHost {
 
 }
 
+
+function Test-IsGuid {
+    param (
+        [Parameter(Mandatory = $true)]
+        [string]$StringGuid
+    )
+    $ObjectGuid = [System.Guid]::empty
+    return [System.Guid]::TryParse($StringGuid, [System.Management.Automation.PSReference]$ObjectGuid)
+}
+
+function Read-ValidatedHost
+{
+<#
+.SYNOPSIS
+    Gets validated user input and ensures that it is not empty. It will continue to prompt until valid text is provided.
+.PARAMETER Prompt
+    Text that will be displayed to user
+.PARAMETER ValidationType
+    Specify 'NotNull' to check for a non-null response and 'Confirm' to make sure the response is Y/Yes or N/No.
+.PARAMETER MinLength
+    Specifies the minimum number of characters the input value can be. The default is 1.
+.PARAMETER MaxLength
+    Specifies the maximum number of characters the input value can be. The default is 1024.
+#>
+
+[OutputType([string])]
+[CmdletBinding()]
+param (
+    [Parameter(Mandatory=$true,Position=0)]
+    [string]
+    $Prompt,
+    [ValidateSet("NotNull","Confirm","Guid")]
+    [Parameter(Mandatory=$false,Position=1)]
+    [string]
+    $ValidationType="NotNull",
+    $MinLength = 1,
+    $MaxLength = 1024
+)
+    # Add a blank line before the prompt
+    Write-Host ""
+    $returnString = ""
+    if ($ValidationType -eq "NotNull")
+    {
+
+        do
+        {
+            $returnString = Read-Host -Prompt $Prompt
+        } while (($returnString -eq "") -or ($returnString.Length -lt $MinLength) -or ($returnString.Length -gt $MaxLength))           
+        return $returnString
+    }
+    elseif ($ValidationType -eq "Confirm")
+    {
+        do
+        {
+            try
+            {
+                [ValidateSet("Y","Yes","N","No")]$returnString = Read-Host -Prompt $Prompt
+            } 
+            catch {
+
+            }
+        } until ($?)
+
+        if (($returnString -eq "Yes") -or ($returnString -eq "Y"))
+        {
+            $returnString = "y"
+        }
+        else
+        {
+            $returnString = "n"
+        } 
+        
+        return $returnString
+
+    }
+    elseif ($ValidationType -eq "Guid"){
+        do
+        {
+            $returnString = Read-Host -Prompt $Prompt
+
+    } while (-not (Test-IsGuid $returnString))           
+    return $returnString
+    }
+    else{
+        return ""
+    
+    }
+}
+
 # This was an attempt to set the maximum idle time for the service point to 10 minutes (600000 milliseconds) instead of the default 1000 milliseconds.
 [System.Net.ServicePointManager]::MaxServicePointIdleTime = 600000
 
 # Validate all parameters have been provided, if not prompt for them.
 if (-not $TableName) {
-    $TableName = Read-Host "Enter the table name:"
+    $TableName = Read-ValidatedHost -Prompt "Enter the table name"
 }
 if (-not $ExportPath) {
-    $ExportPath = Read-Host "Enter the local export path:"
+    $ExportPath = Read-ValidatedHost -Prompt "Enter the local export path"
 }
 if (-not $StartDate) {
-    $StartDate = Read-Host "Enter the start date (MM/dd/yyyy):"
+    $StartDate = Read-ValidatedHost -Prompt "Enter the start date (MM/dd/yyyy)"
 }
 if (-not $EndDate) {
-    $EndDate = Read-Host "Enter the end date (MM/dd/yyyy):"
+    $EndDate = Read-ValidatedHost -Prompt "Enter the end date (MM/dd/yyyy)"
 }
 if (-not $TenantId) {
-    $TenantId = Read-Host "Enter the Azure Tenant ID:"
+    [guid]$TenantId = Read-ValidatedHost -Prompt "Enter the Azure Tenant ID (GUID)" -ValidationType Guid
 }
+else {
+    if (-not (Test-IsGuid $TenantId)){
+        [guid]$TenantId = Read-ValidatedHost -Prompt "Enter the Azure Tenant ID (GUID)" -ValidationType Guid
+    }
+}
+
 if (-not $SubscriptionId) {
-    $SubscriptionId = Read-Host "Enter the Azure Subscription ID:"
+    [guid]$SubscriptionId = Read-ValidatedHost -Prompt "Enter the Azure Subscription ID (GUID)" -ValidationType Guid
+}
+else {
+    if (-not (Test-IsGuid $SubscriptionId)){
+        [guid]$SubscriptionId = Read-ValidatedHost -Prompt "Enter the Azure Subscription ID (GUID)" -ValidationType Guid
+    }
 }
 if (-not $WorkspaceId) {
-    $WorkspaceId = Read-Host "Enter the Log Analytics Workspace ID:"
+    [guid]$WorkspaceId = Read-ValidatedHost "Enter the Log Analytics Workspace ID" -ValidationType Guid
+}
+else {
+    if (-not (Test-IsGuid $WorkspaceId)) {
+    }
 }
 
 # If the DoNotUpload parameter is set to $true, the AzureStorageAccountName, and AzureStorageAccountResourceGroup parameters are not required.
 if ($false -eq $DoNotUpload.IsPresent) {
     if (-not $AzureStorageAccountName) {
-        $AzureStorageAccountName = Read-Host "Enter the Azure Storage Account name:"
+        $AzureStorageAccountName = Read-ValidatedHost "Enter the Azure Storage Account name:"
     }
     if (-not $AzureStorageAccountResourceGroup) {
-        $AzureStorageAccountResourceGroup = Read-Host "Enter the Azure Storage Account resource group:"
+        $AzureStorageAccountResourceGroup = Read-ValidatedHost "Enter the Azure Storage Account resource group"
     }
     if (-not $StandardBlobTier) {
-        $StandardBlobTier = Read-ValidatedBlobTierHost "Enter a blob tier [Hot/Cool/Archive/Cold]:"
+        $StandardBlobTier = Read-ValidatedBlobTierHost "Enter a blob tier [Hot/Cool/Archive/Cold]"
     }
-    if (-not $SentinelResourceGroup) {
-        $SentinelResourceGroup = Read-Host "Enter the Sentinel workspace resource group name:"
+    if (-not $WorkspaceResourceGroup) {
+        $WorkspaceResourceGroup = Read-ValidatedHost "Enter the Sentinel workspace resource group name"
     }
-    if (-not $SentinelWorkspaceName) {
-        $SentinelWorkspaceName = Read-Host "Enter the Sentinel workspace name:"
+    if (-not $WorkspaceName) {
+        $WorkspaceName = Read-ValidatedHost "Enter the Sentinel workspace name"
     }
 }
 
 if (-not $HourIncrements) {
-    $HourIncrements = Read-Host "Enter the number of hours to get data for in each iteration (must be divisable by 24):"
+    [decimal]$HourIncrements = Read-ValidatedHost "Enter the number of hours to get data for in each iteration (must be divisable by 24. To specify increments in minutes, use fractions of an hour [1/60, 2/60, 3/60...])"
 }
 
 # Authenticate to Azure
@@ -328,12 +424,12 @@ foreach ($table in $TableName) {
                                 $timeSpanFileName = "$([System.Xml.XmlConvert]::ToString($currentTimeSpan)).json.zip"
                             }
 
-                            $blobPath = "WorkspaceResourceId=/subscriptions/$SubscriptionId/resourcegroups/$($SentinelResourceGroup.ToLower())/providers/microsoft.operationalinsights/workspaces/$($SentinelWorkspaceName.ToLower())/y=$($currentDate.ToString("yyyy"))/m=$($currentDate.ToString("MM"))/d=$($currentDate.ToString("dd"))/h=$($currentDate.ToString("HH"))/m=$($currentDate.ToString("mm"))/$($timeSpanFileName)"                                
+                            $blobPath = "WorkspaceResourceId=/subscriptions/$SubscriptionId/resourcegroups/$($WorkspaceResourceGroup.ToLower())/providers/microsoft.operationalinsights/workspaces/$($WorkspaceName.ToLower())/y=$($currentDate.ToString("yyyy"))/m=$($currentDate.ToString("MM"))/d=$($currentDate.ToString("dd"))/h=$($currentDate.ToString("HH"))/m=$($currentDate.ToString("mm"))/$($timeSpanFileName)"                                
 
                         }
                         Write-Log "BlobPath: $blobPath" -Severity Debug
 
-                        $result = Set-AzStorageBlobContent -Context $context -Container $azureStorageContainer -File $outputZipFile -Blob $blobPath -Force -ErrorAction Continue
+                        $result = Set-AzStorageBlobContent -Context $context -Container $azureStorageContainer -File $outputZipFile -Blob $blobPath -Force -ErrorAction Continue -AsJob
                         if ($result) {
                             Write-Log " File $outputZipFile uploaded to Azure Storage" -Severity Debug
                         }
@@ -351,6 +447,7 @@ foreach ($table in $TableName) {
             }
         }
         # Assign this so that we start where we left off for the next run.
-    $currentDate = $nextDate
+        $currentDate = $nextDate
+        Write-Log " Azure Blob copy jobs running: $((Get-Job -Command "Set-AzStorageBlobContent" -ErrorAction SilentlyContinue | Where-Object {$_.State -eq "Running"}).Count)" -Severity Information
     }
 }
