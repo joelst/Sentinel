@@ -235,14 +235,9 @@ foreach ($table in $TableName) {
 
     # Set the log file path for the current table.
     $Script:LogFilePath = Join-Path $LogPath "$table-$(Get-Date -f yy.MM).log"
-        
+    $currentDate = $StartDate
     # Loop through each timespan in the range
     for ($i = 0; $i -lt $hours; $i = $i + $HourIncrements) {
-
-        # Calculate the current date based on the start date and the loop index
-        if (-not $currentDate) {
-            $currentDate = $StartDate.AddHours($i)
-        }
         
         $nextDate = $currentDate.AddHours($HourIncrements)
 
@@ -271,10 +266,12 @@ foreach ($table in $TableName) {
         # if the file already exists, skip querying the data
         if ((Test-Path $outputZipFile) -or (Test-Path $outputOldZipFileName)) {
             Write-Log "$outputZipFile exists. Skipping." -Severity Information
+            $currentDate = $nextDate
             continue
         }
         elseif ((Test-Path $outputJsonFile) -or (Test-Path $outputOldJsonFileName)) {
             Write-Log "$outputJsonFile exists. Skipping." -Severity Information
+            $currentDate = $nextDate
             continue
         }
         else {
@@ -352,6 +349,7 @@ foreach ($table in $TableName) {
                 Write-Log -Message "    No data returned for $table from $currentDate to $nextDate" -Severity Information
             }
         }
-        $currentDate = $nextDate
+        # Assign this so that we start where we left off for the next run.
+    $currentDate = $nextDate
     }
 }
