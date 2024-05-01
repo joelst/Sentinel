@@ -74,6 +74,7 @@ param (
     [string]$SentinelResourceGroup = "",
     # Sentinel workspace name.
     [string]$SentinelWorkspaceName = ""
+
 )
 
 function Write-Log {
@@ -327,7 +328,7 @@ foreach ($table in $TableName) {
                                 $timeSpanFileName = "$([System.Xml.XmlConvert]::ToString($currentTimeSpan)).json.zip"
                             }
 
-                            $blobPath = "WorkspaceResourceId=/subscriptions/$SubscriptionId/resourcegroups/$($SentinelResourceGroup.ToLower())/providers/microsoft.operational.insights/workspaces/$($SentinelWorkspaceName.ToLower())/y=$($currentDate.ToString("yyyy"))/m=$($currentDate.ToString("MM"))/d=$($currentDate.ToString("dd"))/h=$($currentDate.ToString("HH"))/m=$($currentDate.ToString("mm"))/$($timeSpanFileName)"                                
+                            $blobPath = "WorkspaceResourceId=/subscriptions/$SubscriptionId/resourcegroups/$($SentinelResourceGroup.ToLower())/providers/microsoft.operationalinsights/workspaces/$($SentinelWorkspaceName.ToLower())/y=$($currentDate.ToString("yyyy"))/m=$($currentDate.ToString("MM"))/d=$($currentDate.ToString("dd"))/h=$($currentDate.ToString("HH"))/m=$($currentDate.ToString("mm"))/$($timeSpanFileName)"                                
 
                         }
                         Write-Log "BlobPath: $blobPath" -Severity Debug
