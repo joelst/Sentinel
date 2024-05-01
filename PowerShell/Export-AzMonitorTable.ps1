@@ -38,7 +38,6 @@
     The path to write the log file. The default is the export path.
 .EXAMPLE
     .\Export-AzMonitorTable.ps1 -TableName "DeviceInfo" -ExportPath "C:\ExportTables" -StartDate "1/1/2023" -EndDate "1/11/2023" -TenantId "00000000-0000-0000-0000-000000000000" -SubscriptionId "00000000-0000-0000-0000-000000000000" -WorkspaceId "00000000-0000-0000-0000-000000000000" -AzureStorageAccountName "storageaccountname" -AzureStorageContainer "containername" -AzureStorageAccountResourceGroup "resourcegroupname" -HourIncrements 12 -LogPath "C:\SentinelTables"
-
     #>
 [CmdletBinding()]
 param (
@@ -112,6 +111,7 @@ function Write-Log {
         }
         Test { 
             Write-Host " [TestOnly] $Message" -ForegroundColor Green
+            
         } 
         Default { 
             Write-Host $Message
@@ -126,6 +126,35 @@ function Write-Log {
 } 
 
 function Read-ValidatedBlobTierHost {
+    <#
+.SYNOPSIS
+    Gets validated user input. It will continue to prompt until valid text is provided.
+.PARAMETER Prompt
+    Text that will be displayed to user
+#>
+    [OutputType([string])]
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory = $true, Position = 0)]
+        [string]
+        $Prompt
+    )
+    # Add a blank line before the prompt
+    Write-Host ""
+    $returnString = ""
+    do {
+        try {
+            [ValidateSet('Hot', 'Cool', 'Archive', 'Cold')]
+            $returnString = Read-Host -Prompt $Prompt
+        } 
+        catch {}
+    } until ($?)
+        
+    return $returnString
+
+}
+
+function Read-ValidatedEventHost {
     <#
 .SYNOPSIS
     Gets validated user input. It will continue to prompt until valid text is provided.
@@ -179,7 +208,7 @@ if (-not $WorkspaceId) {
     $WorkspaceId = Read-Host "Enter the Log Analytics Workspace ID:"
 }
 
-# If the DoNotUpload parameter is specified, the AzureStorageAccountName, StandardBlobTier and AzureStorageAccountResourceGroup parameters are not required.
+# If the DoNotUpload parameter is set to $true, the AzureStorageAccountName, and AzureStorageAccountResourceGroup parameters are not required.
 if ($false -eq $DoNotUpload.IsPresent) {
     if (-not $AzureStorageAccountName) {
         $AzureStorageAccountName = Read-Host "Enter the Azure Storage Account name:"
@@ -239,7 +268,7 @@ foreach ($table in $TableName) {
     for ($i = 0; $i -lt $hours; $i = $i + $HourIncrements) {
 
         # Calculate the current date based on the start date and the loop index
-        if (-not $currentDate) {
+        if (-not $currentDate){
             $currentDate = $StartDate.AddHours($i)
         }
         
@@ -313,7 +342,6 @@ foreach ($table in $TableName) {
                     # upload the zip file to Azure Storage
                     if ($false -eq $DoNotUpload.IsPresent) {
 
-                        # If an AzureStoragePath was defined then use that instead of the default.
                         if ($AzureStoragePath) {
                             if ($DoNotCompress.IsPresent) {
                                 $blobPath = "$($AzureStoragePath)/$($outputJsonFile)"
@@ -352,7 +380,6 @@ foreach ($table in $TableName) {
                 Write-Log -Message "    No data returned for $table from $currentDate to $nextDate" -Severity Information
             }
         }
-        # To make sure we start where we left off and don't miss any data, we will set this loops end time to the next loops start time.
-        $currentDate = $nextDate
+    $currentDate = $nextDate
     }
 }
