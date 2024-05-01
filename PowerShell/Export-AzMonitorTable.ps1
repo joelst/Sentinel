@@ -154,34 +154,6 @@ function Read-ValidatedBlobTierHost {
 
 }
 
-function Read-ValidatedEventHost {
-    <#
-.SYNOPSIS
-    Gets validated user input. It will continue to prompt until valid text is provided.
-.PARAMETER Prompt
-    Text that will be displayed to user
-#>
-    [OutputType([string])]
-    [CmdletBinding()]
-    param (
-        [Parameter(Mandatory = $true, Position = 0)]
-        [string]
-        $Prompt
-    )
-    # Add a blank line before the prompt
-    Write-Host ""
-    $returnString = ""
-    do {
-        try {
-            [ValidateSet('Hot', 'Cool', 'Archive', 'Cold')]$returnString = Read-Host -Prompt $Prompt
-        } 
-        catch {}
-    } until ($?)
-        
-    return $returnString
-
-}
-
 # This was an attempt to set the maximum idle time for the service point to 10 minutes (600000 milliseconds) instead of the default 1000 milliseconds.
 [System.Net.ServicePointManager]::MaxServicePointIdleTime = 600000
 
@@ -268,7 +240,7 @@ foreach ($table in $TableName) {
     for ($i = 0; $i -lt $hours; $i = $i + $HourIncrements) {
 
         # Calculate the current date based on the start date and the loop index
-        if (-not $currentDate){
+        if (-not $currentDate) {
             $currentDate = $StartDate.AddHours($i)
         }
         
@@ -380,6 +352,6 @@ foreach ($table in $TableName) {
                 Write-Log -Message "    No data returned for $table from $currentDate to $nextDate" -Severity Information
             }
         }
-    $currentDate = $nextDate
+        $currentDate = $nextDate
     }
 }
