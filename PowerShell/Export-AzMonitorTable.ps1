@@ -1,4 +1,4 @@
-#requires -version 7 -modules Az.OperationalInsights
+#requires -version 7 -modules Az.OperationalInsights, Az.Storage
 <#
  THIS SCRIPT IS PROVIDED AS-IS. NO WARRANTY IS EXPRESSED OR IMPLIED. 
  
