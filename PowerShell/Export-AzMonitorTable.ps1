@@ -301,7 +301,7 @@ if (-not $HourIncrements) {
 }
 
 # Authenticate to Azure
-Write-Log "Authenticating to Azure." -Severity Information
+Write-Log " Authenticating to Azure." -Severity Information
 $null = Connect-AzAccount -TenantId $TenantId -Subscription $SubscriptionId | Out-Null
 
 # Get the Azure Storage Account context if the DoNotUpload parameter is set to $false.
@@ -354,7 +354,6 @@ foreach ($table in $TableName) {
         $outputJsonFile = Join-Path $ExportPath $jsonFileName
         # Added to support previous longer file name
         $outputOldJsonFileName = Join-Path $ExportPath "$table-$($currentDate.ToString('yyyy-MM-dd-HHmm'))-$($nextDate.ToString('yyyy-MM-dd-HHmm')).json"
-
         $zipFileName = "$table-$($currentDate.ToString('yyyy-MM-dd-HHmm'))-$($nextDate.ToString('yyyy-MM-dd-HHmm')).json.zip"
         $outputZipFile = Join-Path $ExportPath $zipFileName
         # Added to support previous longer file names
@@ -376,13 +375,15 @@ foreach ($table in $TableName) {
             # Construct the query for the current date
             $currentQuery = $table
             $currentTimeSpan = New-TimeSpan -Start $currentDate -End $nextDate
-            Write-Log "Getting data from $currentQuery for $currentDate to $nextDate"
+            $startQueryTime = Get-Date
+            Write-Log " Querying $currentQuery for $currentDate to $nextDate"
+            
             # Get the Table data from Log Analytics for the current date
             $currentTableResult = Invoke-AzOperationalInsightsQuery -WorkspaceId $WorkspaceId -Query $currentQuery -wait 600 -Timespan $currentTimeSpan | Select-Object Results -ExpandProperty Results -ExcludeProperty Results
             
             if ($? -eq $false) {
                 Write-Log -Message "Error: $table from $currentDate to $nextDate $($error.Exception) " -Severity Error
-                Write-Log -Message "Debug: EXCEPTION: $($error.Exception) `n CATEGORY: $($error.CategoryInfo) `n ERROR ID: $($error.FullyQualifiedErrorId) `n SCRIPT STACK TRACE: $($error.ScriptStackTrace)" -Severity Debug
+                Write-Log -Message "EXCEPTION: $($error.Exception) `n CATEGORY: $($error.CategoryInfo) `n ERROR ID: $($error.FullyQualifiedErrorId) `n SCRIPT STACK TRACE: $($error.ScriptStackTrace)" -Severity Debug
                 continue
             }
 
@@ -397,7 +398,9 @@ foreach ($table in $TableName) {
                 else {
                     $outputZipFile = $outputJsonFile 
                 }
-        
+                
+                Write-Log "  Query Time: $(((Get-Date) - $startQueryTime).TotalSeconds)" -Severity Information
+                
                 if (Test-Path $outputZipFile) {    
 
                     if ($DoNotCompress.IsPresent -eq $false) {
@@ -427,19 +430,19 @@ foreach ($table in $TableName) {
                             $blobPath = "WorkspaceResourceId=/subscriptions/$SubscriptionId/resourcegroups/$($WorkspaceResourceGroup.ToLower())/providers/microsoft.operationalinsights/workspaces/$($WorkspaceName.ToLower())/y=$($currentDate.ToString("yyyy"))/m=$($currentDate.ToString("MM"))/d=$($currentDate.ToString("dd"))/h=$($currentDate.ToString("HH"))/m=$($currentDate.ToString("mm"))/$($timeSpanFileName)"                                
 
                         }
-                        Write-Log "BlobPath: $blobPath" -Severity Debug
-
+                        
+                        # Run the upload as a job to continue export.
                         $result = Set-AzStorageBlobContent -Context $context -Container $azureStorageContainer -File $outputZipFile -Blob $blobPath -Force -ErrorAction Continue -AsJob
                         if ($result) {
-                            Write-Log " File $outputZipFile uploaded to Azure Storage" -Severity Debug
+                            Write-Log "  File $outputZipFile uploaded to Azure Storage $azureStorageContainer $blobPath" -Severity Debug
                         }
                         else {
-                            Write-Log " Failed to upload $outputZipFile to Azure Storage" -Severity Error
+                            Write-Log "  Failed to upload $outputZipFile to Azure Storage $azureStorageContainer $blobPath" -Severity Error
                         }
                     }
                 }
                 else {
-                    Write-Log " Failed to create file $outputZipFile" -Severity Debug
+                    Write-Log "  Failed to create file $outputZipFile" -Severity Debug
                 }       
             }
             else {
@@ -448,6 +451,6 @@ foreach ($table in $TableName) {
         }
         # Assign this so that we start where we left off for the next run.
         $currentDate = $nextDate
-        Write-Log " Azure Blob copy jobs running: $((Get-Job -Command "Set-AzStorageBlobContent" -ErrorAction SilentlyContinue | Where-Object {$_.State -eq "Running"}).Count)" -Severity Information
+        Write-Log "  Azure Blob copy jobs running: $((Get-Job -Command "Set-AzStorageBlobContent" -ErrorAction SilentlyContinue | Where-Object {$_.State -eq "Running"}).Count)" -Severity Information
     }
 }
