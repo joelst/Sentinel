@@ -147,7 +147,6 @@ function Read-ValidatedBlobTierHost {
 
 }
 
-
 function Test-IsGuid {
     param (
         [Parameter(Mandatory = $true)]
@@ -374,7 +373,9 @@ foreach ($table in $TableName) {
         
             # Construct the query for the current date
             $currentQuery = $table
+            # Set the timespan for the query.
             $currentTimeSpan = New-TimeSpan -Start $currentDate -End $nextDate
+            # Store time before query to measure timing.
             $startQueryTime = Get-Date
             Write-Log " Querying $currentQuery for $currentDate to $nextDate"
             
@@ -411,6 +412,7 @@ foreach ($table in $TableName) {
                     # upload the zip file to Azure Storage
                     if ($false -eq $DoNotUpload.IsPresent) {
 
+                        # Create a path to upload the file 
                         if ($AzureStoragePath) {
                             if ($DoNotCompress.IsPresent) {
                                 $blobPath = "$($AzureStoragePath)/$($outputJsonFile)"
@@ -426,9 +428,7 @@ foreach ($table in $TableName) {
                             else {
                                 $timeSpanFileName = "$([System.Xml.XmlConvert]::ToString($currentTimeSpan)).json.zip"
                             }
-
                             $blobPath = "WorkspaceResourceId=/subscriptions/$SubscriptionId/resourcegroups/$($WorkspaceResourceGroup.ToLower())/providers/microsoft.operationalinsights/workspaces/$($WorkspaceName.ToLower())/y=$($currentDate.ToString("yyyy"))/m=$($currentDate.ToString("MM"))/d=$($currentDate.ToString("dd"))/h=$($currentDate.ToString("HH"))/m=$($currentDate.ToString("mm"))/$($timeSpanFileName)"                                
-
                         }
                         
                         # Run the upload as a job to continue export.
