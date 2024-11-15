@@ -26,13 +26,12 @@ Below is a collection of resources that may be helpful in learning about Sentine
 
 ## Analytics, Detection, and Hunting
 
-  - [reprise99/Sentinel-Queries: Collection of KQL queries](https://github.com/reprise99/Sentinel-Queries)
-  - [f-bader/AzSentinelQueries: Repository with Sentinel Analytics Rules, Hunting Queries and helpful external data sources.](https://github.com/f-bader/AzSentinelQueries)
-  - [ep3p/Sentinel_KQL: In this repository you may find KQL (Kusto Query Language) queries and Watchlist schemes.](https://github.com/ep3p/Sentinel_KQL)
-  - [rod-trent/SentinelKQL: Azure Sentinel KQL](https://github.com/rod-trent/SentinelKQL)
-  - [cyb3rmik3/KQL-threat-hunting-queries: A repository of KQL queries focused on threat hunting and threat detecting for Microsoft Sentinel &amp; Microsoft XDR (Former Microsoft 365 Defender).](https://github.com/cyb3rmik3/KQL-threat-hunting-queries)
-  - [Bert-JanP/Hunting-Queries-Detection-Rules: KQL Queries. Defender For Endpoint and Azure Sentinel Hunting and Detection Queries in KQL. Out of the box KQL queries for: Advanced Hunting, Custom Detection, Analytics Rules &amp; Hunting Rules.](https://github.com/Bert-JanP/Hunting-Queries-Detection-Rules?tab=readme-ov-file)
-  - [Bert-JanP/Hunting-Queries-Detection-Rules: KQL Queries. Defender For Endpoint and Azure Sentinel Hunting and Detection Queries in KQL. Out of the box KQL queries for: Advanced Hunting, Custom Detection, Analytics Rules &amp; Hunting Rules.](https://github.com/Bert-JanP/Hunting-Queries-Detection-Rules)
+  - [reprise99 Collection of KQL queries](https://github.com/reprise99/Sentinel-Queries)
+  - [f-bader Repository with Sentinel Analytics Rules, Hunting Queries and helpful external data sources.](https://github.com/f-bader/AzSentinelQueries)
+  - [ep3p Sentinel KQL (Kusto Query Language) queries and Watchlist schemes.](https://github.com/ep3p/Sentinel_KQL)
+  - [rod-trent Azure Sentinel KQL](https://github.com/rod-trent/SentinelKQL)
+  - [cyb3rmik3  KQL queries focused on threat hunting and threat detecting for Microsoft Sentinel &amp; Microsoft XDR](https://github.com/cyb3rmik3/KQL-threat-hunting-queries)
+  - [Bert-JanP Sentinel and Defender Hunting and Detection Queries in KQL. Out of the box KQL queries for: Advanced Hunting, Custom Detection, Analytics Rules &amp; Hunting Rules.](https://github.com/Bert-JanP/Hunting-Queries-Detection-Rules?tab=readme-ov-file)
   - [FalconForceTeam/FalconFriday: Hunting queries and detections](https://github.com/FalconForceTeam/FalconFriday)
   - [FalconForceTeam/KQLAnalyzer: REST server that can analyze Kusto KQL queries against the Sentinel and Microsoft 365 Defender schemas.](https://github.com/FalconForceTeam/KQLAnalyzer)
   - [wortell/KQL: KQL queries for Advanced Hunting](https://github.com/wortell/KQL)
