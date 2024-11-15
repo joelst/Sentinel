@@ -8,6 +8,7 @@ Below is a collection of resources that may be helpful in learning about Sentine
 
  -  [What is Microsoft Sentinel](https://learn.microsoft.com/en-us/azure/sentinel/overview?tabs=azure-portal)
  -  [Official Sentinel GitHub (many gems to be found here!)](https://github.com/azure/azure-sentinel)
+ -  [Sentinel Ninja Training](https://techcommunity.microsoft.com/blog/microsoftsentinelblog/become-a-microsoft-sentinel-ninja-the-complete-level-400-training/1246310)
 
 ## KQL Resources
 
