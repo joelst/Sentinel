@@ -73,8 +73,9 @@ Below is a collection of resources that may be helpful in learning about Sentine
 
   - [Syslog message formats | Deep Security](https://help.deepsecurity.trendmicro.com/10_2/azure/Events-Alerts/syslog-parsing.html)
 
+## Defender XDR 
 
-
+- [Defender XDR Ninja Training](https://techcommunity.microsoft.com/blog/microsoftthreatprotectionblog/become-a-microsoft-defender-xdr-ninja/1789376)
 
 
 
