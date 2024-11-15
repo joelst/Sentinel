@@ -1,8 +1,6 @@
-# Microsoft Sentinel
+# Microsoft Sentinel Resources
 
-This repo has random bits a pieces of collected Sentinel scripts, queries, and knicknacks.
-
-Below is a collection of resources that may be helpful in learning about Sentinel.
+This repo has random bits a pieces of collected Sentinel scripts, queries, and knicknacks. Below is a collection of resources that may be helpful in learning about Sentinel.
 
 ## Microsoft Sentinel
 
@@ -74,4 +72,4 @@ Below is a collection of resources that may be helpful in learning about Sentine
 
 ## General SIEM / Logging Resources
 
-  - [Syslog message formats | Deep Security](https://help.deepsecurity.trendmicro.com/10_2/azure/Events-Alerts/syslog-parsing.html)
+  - [Syslog message formats](https://help.deepsecurity.trendmicro.com/10_2/azure/Events-Alerts/syslog-parsing.html)
