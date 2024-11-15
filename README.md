@@ -63,11 +63,11 @@ Below is a collection of resources that may be helpful in learning about Sentine
 
 ## SOC Optimization
 
-  - SOON?
+  - SOON
 
 ## Retention
 
-  - SOON?
+  - SOON
 
 ## Defender XDR 
 
