@@ -78,7 +78,7 @@ This repo has random bits a pieces of collected Sentinel scripts, queries, and k
 
 ### Ninja training
 
-This is a series of videos that cover many securit ninja training topics.
+This is a series of videos that cover many security ninja training topics.
 
 - [Virtual Ninja Training show](https://adoption.microsoft.com/en-us/ninja-show/)
 
