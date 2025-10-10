@@ -73,3 +73,44 @@ This repo has random bits a pieces of collected Sentinel scripts, queries, and k
 ## General SIEM / Logging Resources
 
   - [Syslog message formats](https://help.deepsecurity.trendmicro.com/10_2/azure/Events-Alerts/syslog-parsing.html)
+
+## Training Resources
+
+### Ninja training
+
+This is a series of videos that cover many securit ninja training topics.
+
+- [Virtual Ninja Training show](https://adoption.microsoft.com/en-us/ninja-show/)
+
+
+#### Sentinel Ninja
+
+- [Sentinel Ninja](https://techcommunity.microsoft.com/blog/microsoftsentinelblog/become-a-microsoft-sentinel-ninja-the-complete-level-400-training/1246310)
+- [Sentinel Notebooks Ninja](https://techcommunity.microsoft.com/t5/microsoft-sentinel-blog/becoming-a-microsoft-sentinel-notebooks-ninja-the-series/ba-p/2693491)
+- [Sentinel Automation Ninja](https://techcommunity.microsoft.com/t5/microsoft-sentinel-blog/become-a-microsoft-sentinel-automation-ninja/ba-p/3563377)
+
+#### Defender Ninja
+
+- [Defender for Endpoint Ninja](http://aka.ms/mdeninja)
+- [Defender XDR Ninja](http://aka.ms/m365dninja)
+- [Defender for Office 365 Ninja](https://aka.ms/mdoninja)
+- [Microsoft Defender for Identity Ninja](http://aka.ms/mdininja)
+- [Microsoft Incident Response Ninja](https://aka.ms/MicrosoftIRNinjaHub)
+- [Microsoft Security Exposure Management Ninja](https://techcommunity.microsoft.com/blog/securityexposuremanagement/microsoft-security-exposure-management-ninja-training/4444285)
+- [Microsoft Defender for Cloud Apps Ninja](http://aka.ms/mcasninja)
+- [Microsoft Defender Threat Intelligence Ninja](https://techcommunity.microsoft.com/blog/defenderthreatintelligence/become-an-mdti-ninja-the-complete-level-400-training/3656965)
+- [Microsoft Defender External Attack Surface Management Ninja](https://techcommunity.microsoft.com/blog/defenderexternalattacksurfacemgmtblog/become-a-microsoft-defender-external-attack-surface-management-ninja-level-400-t/3743985)
+- [Microsoft Defender for Cloud Ninja](https://techcommunity.microsoft.com/blog/microsoftdefendercloudblog/become-a-microsoft-defender-for-cloud-ninja/1608761)
+- [Microsoft Defender Vulnerability Management Ninja](https://techcommunity.microsoft.com/blog/vulnerability-management/become-a-microsoft-defender-vulnerability-management-ninja/4003011)
+- [Microsoft Security Copilot Ninja](https://aka.ms/CopilotForSecurityNinja)
+- [Microsoft Defender for IoT Ninja](https://techcommunity.microsoft.com/t5/microsoft-defender-for-iot-blog/microsoft-defender-for-iot-ninja-training/ba-p/2428899)
+
+#### Azure Ninja
+
+- [Azure Network Security Ninja](https://aka.ms/AzNetSecNinja)
+
+### Non-Ninja self-paced training
+
+- [Microsoft Partner Security Academy](https://microsoft.github.io/PartnerResources/skilling/microsoft-security-academy)
+- [Microsoft Learn - Security Operations Analyst training](https://learn.microsoft.com/en-us/plans/zw5jsk57mwp5g2)
+- [Microsoft Learn - Security Engineer training](https://learn.microsoft.com/en-us/plans/w1n3tj58yy2xqy)
