@@ -39,6 +39,8 @@ This repo has random bits a pieces of collected Sentinel scripts, queries, and k
 
   - [Commonly Used Sentinel Workbooks](https://learn.microsoft.com/en-us/azure/sentinel/top-workbooks)
   - [Advanced Workbook Concepts](https://techcommunity.microsoft.com/blog/microsoftsentinelblog/advanced-workbook-concepts-with-workbooks-202/3784676)
+  - [Rod Trent's Sentinel Workbooks](https://github.com/rod-trent/SentinelWorkbooks)
+  - [Kevin M1 multiple Sentinel resources)(https://github.com/Kevin-M1)
 
 ## Playbooks and Automation
 
